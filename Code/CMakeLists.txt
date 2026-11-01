@@ -16,5 +16,7 @@ target_sources(app PRIVATE
   src/flash.c
 )
 
+target_sources_ifdef(CONFIG_FART_SCREEN app PRIVATE src/screen.c)
+
 target_include_directories(app PRIVATE include)
 # NORDIC SDK APP END

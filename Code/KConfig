@@ -14,4 +14,12 @@ config SWAP_PROBES_PRESS_TIME_SECONDS
 	range 2 19
 	default 5
 
+config FART_SCREEN
+	bool "Show probe readings on an SSD1306 screen"
+	depends on DISPLAY
+	select CHARACTER_FRAMEBUFFER
+	help
+	  Shows the temperature and resistance of both probes on the OLED of
+	  the Seeed Expansion Base for XIAO. See xiao_expansion_base.conf.
+
 endmenu

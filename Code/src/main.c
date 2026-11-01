@@ -31,6 +31,7 @@
 #include <ram_pwrdn.h>
 
 #include "flash.h"
+#include "screen.h"
 
 static struct nvs_fs fs;
 
@@ -363,6 +364,11 @@ int main(void)
 	da_flash_uninit();
 
 	configure_gpio();
+
+	if (screen_init() == 0)
+	{
+		screen_show_message("Joining...");
+	}
 
 	register_swap_probes_button(1);
 	register_factory_reset_button(1);
@@ -718,8 +724,10 @@ struct adc_sequence battery_sequence = {
 float mv_per_lsb = 3000.0F / 4096.0F;	   // 0.6 / (1/5) = 3
 float batt_mv_per_lsb = 3600.0F / 4096.0F; // 0.6 / (1/6) = 3.6
 
-static uint16_t read_temperature(int i)
+static uint16_t read_temperature(int i, float *resistance)
 {
+	*resistance = -1;
+
 	int err = adc_sequence_init_dt(&adc_channels[i], &temperature_sequence);
 
 	if (err < 0)
@@ -741,6 +749,8 @@ static uint16_t read_temperature(int i)
 	int32_t val_mv = (float)adc_reading * mv_per_lsb;
 
 	float reading = (val_mv * SERIESRESISTOR) / (CONFIG_REFERENCE_VOLTAGE - val_mv);
+
+	*resistance = reading;
 
 	double steinhart;
 	steinhart = reading / THERMISTORNOMINAL;		  // (R/Ro)
@@ -856,21 +866,25 @@ static int read_temperatures()
 
 	uint16_t temperature_1;
 	uint16_t temperature_2;
+	float resistance_1;
+	float resistance_2;
 
 	if (probes_swapped)
 	{
-		temperature_1 = read_temperature(1);
-		temperature_2 = read_temperature(0);
+		temperature_1 = read_temperature(1, &resistance_1);
+		temperature_2 = read_temperature(0, &resistance_2);
 	}
 	else
 	{
-		temperature_1 = read_temperature(0);
-		temperature_2 = read_temperature(1);
+		temperature_1 = read_temperature(0, &resistance_1);
+		temperature_2 = read_temperature(1, &resistance_2);
 	}
 
 	// Switch off the power pin.
 	//
 	gpio_pin_set_dt(&temperatures_divider_power, 0);
+
+	screen_show_readings((int16_t)temperature_1, resistance_1, (int16_t)temperature_2, resistance_2);
 
 	int16_t temperature_attribute_1 = (int16_t)(temperature_1 * ZCL_TEMPERATURE_MEASUREMENT_MEASURED_VALUE_MULTIPLIER);
 

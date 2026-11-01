@@ -1,0 +1,43 @@
+/*
+ * Seeed Studio Expansion Base for XIAO: 128x64 SSD1306 OLED on the XIAO I2C
+ * pins (D4/D5). Based on Zephyr's seeed_xiao_expansion_board shield, but only
+ * the display - the shield's button, buzzer and SD card share pins with the probes.
+ *
+ * Applied after boards/xiao_ble.overlay, so it re-enables the i2c1 bus that
+ * overlay disables to save power. Use together with xiao_expansion_base.conf.
+ */
+
+/ {
+	chosen {
+		zephyr,display = &ssd1306_128x64;
+	};
+};
+
+&i2c1 {
+	/* The XIAO board picks the legacy TWI driver, which doesn't support
+	 * CONFIG_PM_DEVICE_RUNTIME: the bus is suspended at boot and never resumed,
+	 * so every transfer fails. TWIM resumes the bus around each transfer.
+	 */
+	compatible = "nordic,nrf-twim";
+	status = "okay";
+
+	/* The SSD1306 driver sends a 1 byte control prefix and the whole 128x64
+	 * framebuffer (1024 bytes) as one burst write, which TWIM merges into this
+	 * buffer. The 16 byte default rejects it, leaving random pixels on screen.
+	 */
+	zephyr,concat-buf-size = <1025>;
+
+	ssd1306_128x64: ssd1306@3c {
+		compatible = "solomon,ssd1306fb";
+		reg = <0x3c>;
+		width = <128>;
+		height = <64>;
+		segment-offset = <0>;
+		page-offset = <0>;
+		display-offset = <0>;
+		multiplex-ratio = <63>;
+		segment-remap;
+		com-invdir;
+		prechargep = <0x22>;
+	};
+};
